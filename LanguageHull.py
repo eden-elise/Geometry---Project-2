@@ -9,3 +9,10 @@ Different scripts (Latin, Arabic, Chinese) are expected to produce geometrically
 distinct hulls.
 
 """
+
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.textpath import TextPath
+from matplotlib.font_manager import FontProperties
+from scipy.spatial import ConvexHull
