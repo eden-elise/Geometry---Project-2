@@ -68,3 +68,21 @@ def render_text_path(word:str, font: FontProperties, size:int) -> np.ndarray:
     """
     path = TextPath((0,0), word, seze=size, prop=font)
     return path.vertices
+
+def is_anchor_point(point: np.ndarray) -> bool:
+    """
+        Return True if a point is an anchor point, this means a point in which the text
+        path has to pick up the pen and "reset" so it inserts (0,0) as an anchor point. 
+        These are not part of the letter and would skew the convex hull
+    """
+    #point[0] == 0 , x is exactly 0
+    #point[1] == 0 , y is exactly 0
+    return point[0] == 0 and point[1] == 0
+
+def filter_anchor_points(verts: np.ndarray) -> np.ndarray:
+    """
+    Remove all artifact (0, 0) anchor points from a vertex array.
+    Returns only the points that represent real glyph geometry.
+    """
+    mask = np.array([not is_anchor_point(p) for p in verts])
+    return verts[mask]
