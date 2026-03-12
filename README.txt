@@ -1,3 +1,50 @@
+## Python Environment
+
+### Setup
+
+Create and activate a virtual environment, then install dependencies.
+
+#### Mac / Linux
+
+```bash
+python -m venv .
+source bin/activate
+pip install -r requirements.txt
+```
+
+#### Windows
+
+```powershell
+python -m venv . 
+\Scripts\activate
+pip install -r requirements.txt
+```
+
+---
+
+### Updating `requirements.txt`
+
+If you install new packages or update existing ones, regenerate the dependency list:
+
+```bash
+pip freeze > requirements.txt
+```
+
+Commit the updated file:
+
+```bash
+git add requirements.txt
+git commit -m "Update dependencies"
+```
+
+Others can recreate the same environment with:
+
+```bash
+pip install -r requirements.txt
+```
+
+
+
 Noto Sans Arabic Variable Font
 ==============================
 
