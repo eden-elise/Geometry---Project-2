@@ -18,9 +18,9 @@ from matplotlib.font_manager import FontProperties
 from scipy.spatial import ConvexHull
 
 FONT_PATHS = {
-    "English": "fonts/NotoSans.ttf",
-    "Chinese": "fonts/NotoSansTC.ttf",
-    "Arabic":  "fonts/NotoSansArabic.ttf",
+    "English": "fonts/Noto_Sans/static/NotoSans_SemiCondensed-Regular.ttf",
+    "Arabic": "fonts/Noto_Sans_Arabic/static/NotoSansArabic_SemiCondensed-Regular.ttf",
+    "Chinese":  "fonts/Noto_Sans_TC/static/NotoSansTC-Regular.ttf",
 }
 
 # easiest to test on a small set of words can expand one it works
@@ -30,8 +30,8 @@ WORDS = {
         "sky", "mountain", "river", "music", "dream",
     ],
     "Chinese": [
-        "你好", "世界", "美丽", "算法", "语言",
-        "天空", "山脉", "河流", "音乐", "梦想",
+        "你好", "世界", "美丽", "算法", "語言", #NOTE: MUST BE TRADITIONAL CHINESE, SIMPLIFIED HAS DIFFERENT GLYPHS that are not in the font.
+        "天空", "山脉", "河流", "音樂", "梦想",
     ],
     "Arabic": [
         "مرحبا", "عالم", "جميل", "خوارزمية", "لغة",
@@ -66,7 +66,7 @@ def render_text_path(word:str, font: FontProperties, size:int) -> np.ndarray:
         fire, so every point in the returned (N,2) array lies on the visable boundary
         of the text.
     """
-    path = TextPath((0,0), word, seze=size, prop=font)
+    path = TextPath((0,0), word, size=size, prop=font)
     return path.vertices
 
 def is_anchor_point(point: np.ndarray) -> bool:
@@ -86,3 +86,81 @@ def filter_anchor_points(verts: np.ndarray) -> np.ndarray:
     """
     mask = np.array([not is_anchor_point(p) for p in verts])
     return verts[mask]
+
+def compute_convex_hull(points: np.ndarray):
+    """
+    Compute the convex hull for a set of 2D points.
+    """
+    if len(points) < 3:
+        return None
+    return ConvexHull(points)
+
+
+def plot_word_hull(ax, points, hull, color, title,font):
+    """
+    Plot sampled text points and their convex hull.
+    """
+    ax.scatter(points[:,0], points[:,1], s=1, color="black", alpha=0.4)
+
+    if hull is not None:
+        hull_pts = points[hull.vertices]
+        polygon = Polygon(hull_pts, fill=False, edgecolor=color, linewidth=2)
+        ax.add_patch(polygon)
+
+    ax.set_title(title, fontproperties=font)
+    ax.set_aspect("equal")
+    ax.axis("off")
+
+
+def visualize_language(language, words, font):
+    """
+    Plot convex hulls for all words in a language.
+    """
+    n = len(words)
+    cols = 5
+    rows = int(np.ceil(n / cols))
+
+    fig, axes = plt.subplots(rows, cols, figsize=(15, 3*rows))
+    axes = axes.flatten()
+
+    for i, word in enumerate(words):
+
+        verts = render_text_path(word, font, size=100)
+        verts = filter_anchor_points(verts)
+
+        hull = compute_convex_hull(verts)
+
+        plot_word_hull(
+            axes[i],
+            verts,
+            hull,
+            COLORS[language],
+            word,
+            font
+        )
+
+    for j in range(i+1, len(axes)):
+        axes[j].axis("off")
+
+    fig.suptitle(f"{language} Convex Hulls", fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+
+def run_language_tests():
+    """
+    Main driver for testing all languages.
+    """
+    languages = list(WORDS.keys())
+    fonts = build_font_registry(languages)
+
+    for lang in languages:
+        visualize_language(
+            lang,
+            WORDS[lang],
+            fonts[lang]
+        )
+
+
+
+run_language_tests()
