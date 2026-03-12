@@ -164,3 +164,7 @@ def run_language_tests():
 
 
 run_language_tests()
+
+#Write a function:
+# Should return 10000 HULLS IN EACH LANGUAGE 
+#STUCTURE: HULL POINTS, NUM of CHARACTERS, LANGUAGE LABEL, ORIGINAL WORD.
