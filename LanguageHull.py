@@ -16,6 +16,9 @@ from matplotlib.patches import Polygon
 from matplotlib.textpath import TextPath
 from matplotlib.font_manager import FontProperties
 from scipy.spatial import ConvexHull
+from convexhullcustom import ConvexHull_C
+
+CONVEX_HULL = "custom"
 
 FONT_PATHS = {
     "English": "fonts/Noto_Sans/static/NotoSans_SemiCondensed-Regular.ttf",
@@ -93,8 +96,8 @@ def compute_convex_hull(points: np.ndarray):
     """
     if len(points) < 3:
         return None
-    return ConvexHull(points)
-
+    
+    return ConvexHull(points) if CONVEX_HULL is None else ConvexHull_C(points)
 
 def plot_word_hull(ax, points, hull, color, title,font):
     """
