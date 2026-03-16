@@ -24,6 +24,8 @@ FONT_PATHS = {
     "Chinese":  "fonts/Noto_Sans_TC/static/NotoSansTC-Regular.ttf",
 }
 
+N_WORDS_PER_LANGUAGE = 3333
+
 COLORS = {
     "English": "#4A90D9",
     "Chinese": "#E85D4A",
@@ -221,7 +223,7 @@ def process_word_to_record(word: str, lang: str, font: FontProperties) -> dict |
 run_language_tests()
 
 # Step 2 — generate full dataset (uncomment when visuals look correct)
-# full_words = load_word_lists(n_per_language=3333)
+# full_words = load_word_lists(n_per_language=N_WORDS_PER_LANGUAGE)
 # font_registry = build_font_registry(list(full_words.keys()))
 # dataset = generate_hull_dataset(full_words, font_registry)
 # print(f"Generated {len(dataset)} records")
