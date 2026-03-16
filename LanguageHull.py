@@ -168,3 +168,35 @@ run_language_tests()
 #Write a function:
 # Should return 10000 HULLS IN EACH LANGUAGE 
 #STUCTURE: HULL POINTS, NUM of CHARACTERS, LANGUAGE LABEL, ORIGINAL WORD.
+def generate_hull_dataset(words_by_lang: dict, font_registry: dict) -> list[dict]:
+    """
+    for every word compute its convex hull and store:
+    - hull points
+    - number of charaters
+    - language
+    - word
+    """
+    dataset = []
+    for lang, words in words_by_lang.items():
+        font = font_registry[lang]
+        for word in words:
+            record = process_word_to_record(word, lang, font)
+            if record is not None:
+                dataset.append(record)
+    return dataset
+    
+def process_word_to_record(word: str, lang: str, font: FontProperties) -> dict | None:
+    """
+    convert a word into one dataset record.
+    Returns None if the hull could not be computed.
+    """
+    verts = filter_anchor_points(render_text_path(word, font, size=100))
+    hull  = compute_convex_hull(verts)
+    if hull is None:
+        return None
+    return {
+        "hull_points": verts[hull.vertices],  # just the boundary points
+        "num_chars":   len(word),
+        "language":    lang,
+        "word":        word,
+    }
