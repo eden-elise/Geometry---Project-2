@@ -10,8 +10,8 @@ from numpy.typing import NDArray
 
 class ConvexHull_C():
     def __init__(self, points):
-       self.points = points
-       self.hull, self.vertices = self.convex_hull_custom(points)
+      self.points = points
+      self.hull, self.vertices = self.convex_hull_custom(points)
 
     def convex_hull_custom(self, points: np.ndarray)-> np.ndarray:
       start_idx = np.argmin(points[:, 1])

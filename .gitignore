@@ -9,6 +9,7 @@ Lib/
 Scripts/
 share/
 pyvenv.cfg
+bin/
 
 # Python cache
 __pycache__/
