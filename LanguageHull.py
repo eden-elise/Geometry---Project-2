@@ -9,7 +9,10 @@ Different scripts (Latin, Arabic, Chinese) are expected to produce geometrically
 distinct hulls.
 
 """
+import time
+start = time.perf_counter()
 
+import json
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
@@ -17,9 +20,12 @@ from matplotlib.textpath import TextPath
 from matplotlib.font_manager import FontProperties
 from scipy.spatial import ConvexHull
 from convexhullcustom import ConvexHull_C
+plt.style.use("seaborn-v0_8")
 
-CONVEX_HULL = "eden is the best"
+CONVEX_HULL = ""
 import nltk
+
+import re
 
 FONT_PATHS = {
     "English": "fonts/Noto_Sans/static/NotoSans_SemiCondensed-Regular.ttf",
@@ -27,7 +33,7 @@ FONT_PATHS = {
     "Chinese":  "fonts/Noto_Sans_TC/static/NotoSansTC-Regular.ttf",
 }
 
-N_WORDS_PER_LANGUAGE = 3333
+N_WORDS_PER_LANGUAGE = 5000
 
 COLORS = {
     "English": "#4A90D9",
@@ -62,8 +68,8 @@ def load_word_lists(n_per_language: int) -> dict:
     """
     return {
         "English": load_english_words(n_per_language),
-        "Chinese": load_words_from_frequency_file("zh_tw_50k.txt", n_per_language),
-        "Arabic":  load_words_from_frequency_file("ar_50k.txt",    n_per_language),
+        "Chinese": load_words_from_frequency_file("languageWords/zh_tw_50k.txt", n_per_language),
+        "Arabic":  load_words_from_frequency_file("languageWords/ar_50k.txt",    n_per_language),
     }
 
 def load_font(lang: str) -> FontProperties: 
@@ -216,17 +222,31 @@ def process_word_to_record(word: str, lang: str, font: FontProperties) -> dict |
     if hull is None:
         return None
     return {
-        "hull_points": verts[hull.vertices],  # just the boundary points
+        "hull_points": verts[hull.vertices].tolist(),  # just the boundary points
         "num_chars":   len(word),
         "language":    lang,
         "word":        word,
     }
 
 # Step 1 — visual sanity check
-run_language_tests()
+#run_language_tests()
 
 # Step 2 — generate full dataset (uncomment when visuals look correct)
-# full_words = load_word_lists(n_per_language=N_WORDS_PER_LANGUAGE)
-# font_registry = build_font_registry(list(full_words.keys()))
+full_words = load_word_lists(n_per_language=N_WORDS_PER_LANGUAGE)
+font_registry = build_font_registry(list(full_words.keys()))
 # dataset = generate_hull_dataset(full_words, font_registry)
 # print(f"Generated {len(dataset)} records")
+
+# Convert the dataset to JSON and dump it to a file
+
+text = json.dumps(generate_hull_dataset(full_words, font_registry), ensure_ascii=False, indent=2) 
+text = re.sub(
+    r'\[\s*(-?\d+\.?\d*),\s*(-?\d+\.?\d*)\s*\]',
+    r'[\1, \2]',
+    text
+)
+with open("dataset.json", "w", encoding="utf-8") as f:
+    f.write(text)
+end = time.perf_counter()
+
+print("Runtime:", end - start, "seconds")
