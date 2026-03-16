@@ -19,6 +19,7 @@ from scipy.spatial import ConvexHull
 from convexhullcustom import ConvexHull_C
 
 CONVEX_HULL = "custom"
+import nltk
 
 FONT_PATHS = {
     "English": "fonts/Noto_Sans/static/NotoSans_SemiCondensed-Regular.ttf",
@@ -26,27 +27,44 @@ FONT_PATHS = {
     "Chinese":  "fonts/Noto_Sans_TC/static/NotoSansTC-Regular.ttf",
 }
 
-# easiest to test on a small set of words can expand one it works
-WORDS = {
-    "English": [
-        "hello", "world", "beautiful", "algorithm", "language",
-        "sky", "mountain", "river", "music", "dream",
-    ],
-    "Chinese": [
-        "你好", "世界", "美丽", "算法", "語言", #NOTE: MUST BE TRADITIONAL CHINESE, SIMPLIFIED HAS DIFFERENT GLYPHS that are not in the font.
-        "天空", "山脉", "河流", "音樂", "梦想",
-    ],
-    "Arabic": [
-        "مرحبا", "عالم", "جميل", "خوارزمية", "لغة",
-        "سماء", "جبل", "نهر", "موسيقى", "حلم",
-    ],
-}
+N_WORDS_PER_LANGUAGE = 3333
 
 COLORS = {
     "English": "#4A90D9",
     "Chinese": "#E85D4A",
     "Arabic":  "#50C878",
 }
+
+def load_english_words(n: int) -> list[str]:
+    """
+    Pull the n most common words from NLTK's Brown Corpus.
+    Filters to alphabetic-only words to avoid punctuation tokens.
+    """
+    nltk.download('brown', quiet=True)
+    from nltk.corpus import brown
+    all_words = [w.lower() for w in brown.words() if w.isalpha()]
+    unique_words = list(dict.fromkeys(all_words))
+    return unique_words[:n]
+
+def load_words_from_frequency_file(filepath: str, n: int) -> list[str]:
+    """
+    Load the top n words from a frequency word list file.
+    Each line in the file is: "word count" — we just want the word.
+    for the Chinese and Arabic frequency files.
+    """
+    with open(filepath, encoding="utf-8") as f:
+        lines = f.readlines()
+    return [line.split()[0] for line in lines if line.strip()][:n]
+
+def load_word_lists(n_per_language: int) -> dict:
+    """
+    Load n words for each language and return as the WORDS dict.
+    """
+    return {
+        "English": load_english_words(n_per_language),
+        "Chinese": load_words_from_frequency_file("zh_tw_50k.txt", n_per_language),
+        "Arabic":  load_words_from_frequency_file("ar_50k.txt",    n_per_language),
+    }
 
 def load_font(lang: str) -> FontProperties: 
     """
@@ -153,21 +171,62 @@ def visualize_language(language, words, font):
 def run_language_tests():
     """
     Main driver for testing all languages.
+    Uses a small word list for quick visual checking.
     """
-    languages = list(WORDS.keys())
-    fonts = build_font_registry(languages)
+    test_words = {
+        "English": ["hello", "world", "beautiful", "algorithm", "language",
+                    "sky", "mountain", "river", "music", "dream"],
+        "Chinese": ["你好", "世界", "美丽", "算法", "語言",
+                    "天空", "山脉", "河流", "音樂", "梦想"],
+        "Arabic":  ["مرحبا", "عالم", "جميل", "خوارزمية", "لغة",
+                    "سماء", "جبل", "نهر", "موسيقى", "حلم"],
+    }
+    fonts = build_font_registry(list(test_words.keys()))
+    for lang in test_words:
+        visualize_language(lang, test_words[lang], fonts[lang])
 
-    for lang in languages:
-        visualize_language(
-            lang,
-            WORDS[lang],
-            fonts[lang]
-        )
-
-
-
-run_language_tests()
 
 #Write a function:
 # Should return 10000 HULLS IN EACH LANGUAGE 
 #STUCTURE: HULL POINTS, NUM of CHARACTERS, LANGUAGE LABEL, ORIGINAL WORD.
+def generate_hull_dataset(words_by_lang: dict, font_registry: dict) -> list[dict]:
+    """
+    for every word compute its convex hull and store:
+    - hull points
+    - number of charaters
+    - language
+    - word
+    """
+    dataset = []
+    for lang, words in words_by_lang.items():
+        font = font_registry[lang]
+        for word in words:
+            record = process_word_to_record(word, lang, font)
+            if record is not None:
+                dataset.append(record)
+    return dataset
+    
+def process_word_to_record(word: str, lang: str, font: FontProperties) -> dict | None:
+    """
+    convert a word into one dataset record.
+    Returns None if the hull could not be computed.
+    """
+    verts = filter_anchor_points(render_text_path(word, font, size=100))
+    hull  = compute_convex_hull(verts)
+    if hull is None:
+        return None
+    return {
+        "hull_points": verts[hull.vertices],  # just the boundary points
+        "num_chars":   len(word),
+        "language":    lang,
+        "word":        word,
+    }
+
+# Step 1 — visual sanity check
+run_language_tests()
+
+# Step 2 — generate full dataset (uncomment when visuals look correct)
+# full_words = load_word_lists(n_per_language=N_WORDS_PER_LANGUAGE)
+# font_registry = build_font_registry(list(full_words.keys()))
+# dataset = generate_hull_dataset(full_words, font_registry)
+# print(f"Generated {len(dataset)} records")
