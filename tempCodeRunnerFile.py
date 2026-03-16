@@ -1,1 +1,0 @@
-hull = np.array([points[stard_idx], points1[0]])
