@@ -18,7 +18,7 @@ from matplotlib.font_manager import FontProperties
 from scipy.spatial import ConvexHull
 from convexhullcustom import ConvexHull_C
 
-CONVEX_HULL = "custom"
+CONVEX_HULL = "eden is the best"
 import nltk
 
 FONT_PATHS = {
