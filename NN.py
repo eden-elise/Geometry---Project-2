@@ -170,7 +170,62 @@ def visualize_prediction_gallery(model, test_db, dataset_obj, samples_per_lang=4
     plt.show()
 # To call this in your run_experiment():
 # visualize_prediction_gallery(model, test_db, dataset)
+import matplotlib.pyplot as plt
 
+def plot_model_structure(input_dim, hidden1, hidden2, output_dim):
+    # Layer definitions: name, size, and vertical offset for centering
+    layers = [
+        ("Input\n(Resampled Hull)", input_dim, "skyblue"),
+        ("Hidden 1\n(ReLU + Dropout)", hidden1, "lightgreen"),
+        ("Hidden 2\n(ReLU)", hidden2, "lightgreen"),
+        ("Output\n(Language)", output_dim, "orange")
+    ]
+    
+    fig, ax = plt.subplots(figsize=(12, 8))
+    ax.axis('off')
+
+    # Horizontal spacing between layers
+    layer_x = [0, 2, 4, 6]
+    
+    # We will limit how many neurons we actually draw for large layers
+    max_visible_neurons = 10 
+
+    for i, (name, size, color) in enumerate(layers):
+        # Calculate how many neurons to actually draw
+        n_to_draw = min(size, max_visible_neurons)
+        y_points = np.linspace(-n_to_draw/2, n_to_draw/2, n_to_draw)
+        
+        # Draw neurons
+        for y in y_points:
+            circle = plt.Circle((layer_x[i], y), 0.15, color=color, ec='black', zorder=4)
+            ax.add_artist(circle)
+        
+        # If we truncated the layer, add "..." in the middle
+        if size > max_visible_neurons:
+            ax.text(layer_x[i], 0, '...', fontsize=20, ha='center', va='center')
+
+        # Label the layer
+        ax.text(layer_x[i], n_to_draw/2 + 0.5, f"{name}\n({size} nodes)", 
+                ha='center', va='bottom', fontweight='bold')
+
+        # Draw connections to the next layer
+        if i < len(layers) - 1:
+            next_size = layers[i+1][1]
+            next_n_to_draw = min(next_size, max_visible_neurons)
+            next_y_points = np.linspace(-next_n_to_draw/2, next_n_to_draw/2, next_n_to_draw)
+            
+            for y_curr in y_points:
+                for y_next in next_y_points:
+                    ax.plot([layer_x[i], layer_x[i+1]], [y_curr, y_next], 
+                            color='gray', alpha=0.1, lw=0.5, zorder=1)
+
+    ax.set_xlim(-1, 7)
+    ax.set_ylim(-max_visible_neurons/2 - 1, max_visible_neurons/2 + 2)
+    plt.title("Language Classifier: Neural Network Architecture", fontsize=16)
+    plt.show()
+
+# To call it:
+# plot_model_structure(input_dim=40, hidden1=128, hidden2=64, output_dim=3)
 # --- 4. Main Experiment ---
 
 def run_experiment():
@@ -188,21 +243,61 @@ def run_experiment():
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=0.001)
 
+    # --- TRACKING METRICS ---
+    loss_history = []
+    accuracy_history = [] 
+
     print(f"Training model on {len(train_db)} samples...")
-    for epoch in range(15):
+    epochs = 15
+    for epoch in range(epochs):
         model.train()
         total_loss = 0
+        total_correct = 0
+        total_samples = 0
+        
         for inputs, targets in train_loader:
             optimizer.zero_grad()
-            loss = criterion(model(inputs), targets)
+            outputs = model(inputs)
+            loss = criterion(outputs, targets)
             loss.backward()
             optimizer.step()
+            
+            # Update metrics
             total_loss += loss.item()
+            _, predicted = torch.max(outputs.data, 1)
+            total_samples += targets.size(0)
+            total_correct += (predicted == targets).sum().item()
         
-        if (epoch + 1) % 5 == 0:
-            print(f"Epoch {epoch+1}/15 - Loss: {total_loss/len(train_loader):.4f}")
+        # Calculate epoch averages
+        avg_loss = total_loss / len(train_loader)
+        epoch_acc = (total_correct / total_samples) * 100
+        
+        loss_history.append(avg_loss)
+        accuracy_history.append(epoch_acc)
+        
+        print(f"Epoch {epoch+1}/{epochs} - Loss: {avg_loss:.4f} | Acc: {epoch_acc:.2f}%")
 
-    # Accuracy check
+    # --- PLOT LOSS AND ACCURACY ---
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15, 5))
+
+    # Plot 1: Error (Loss)
+    ax1.plot(range(1, epochs + 1), loss_history, marker='o', color='#E85D4A', linewidth=2)
+    ax1.set_title('Training Error (Loss) per Epoch')
+    ax1.set_xlabel('Epoch')
+    ax1.set_ylabel('Loss')
+    ax1.grid(True, linestyle='--', alpha=0.6)
+
+    # Plot 2: Accuracy (Correct / Total)
+    ax2.plot(range(1, epochs + 1), accuracy_history, marker='s', color='#4A90D9', linewidth=2)
+    ax2.set_title('Training Accuracy (%) per Epoch')
+    ax2.set_xlabel('Epoch')
+    ax2.set_ylabel('Accuracy (%)')
+    ax2.grid(True, linestyle='--', alpha=0.6)
+
+    plt.tight_layout()
+    plt.show()
+
+    # Final Accuracy check on Test Set
     model.eval()
     correct, total = 0, 0
     with torch.no_grad():
@@ -214,7 +309,8 @@ def run_experiment():
 
     print(f"\nFinal Accuracy on Test Set: {100 * correct / total:.2f}%")
     
-    # Run the visualization
+    # Rest of your visualizations
+    plot_model_structure(input_dim=40, hidden1=128, hidden2=64, output_dim=3)
     visualize_prediction_gallery(model, test_db, dataset)
 
 

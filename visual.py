@@ -90,7 +90,7 @@ class VisualizeConvexHull(Scene):
             next_idx = sorted_indices[step]
 
             # Highlight candidate in orange
-            self.play(dots[next_idx].animate.set_color(ORANGE), run_time=0.25)
+            self.play(dots[next_idx].animate.set_color(ORANGE), run_time=0.1)
 
             # Pop while the last turn is not a strict left turn
             while len(hull_indices) > 1:
@@ -106,7 +106,7 @@ class VisualizeConvexHull(Scene):
                     self.play(
                         dots[hull_indices[-1]].animate.set_color(RED),
                         FadeOut(hull_lines[-1]),
-                        run_time=0.25,
+                        run_time=0.1,
                     )
                     hull_indices.pop()
                     hull_lines.remove(hull_lines[-1])
@@ -117,8 +117,8 @@ class VisualizeConvexHull(Scene):
             new_edge = Line(pts3d[hull_indices[-1]], pts3d[next_idx], color=GOLD)
             hull_lines.add(new_edge)
             hull_indices.append(next_idx)
-            self.play(Create(new_edge), run_time=0.25)
-            self.play(dots[next_idx].animate.set_color(GOLD), run_time=0.15)
+            self.play(Create(new_edge), run_time=0.1)
+            self.play(dots[next_idx].animate.set_color(GOLD), run_time=0.1)
 
         # ── 7. Close the hull ────────────────────────────────────────────────
         closing = Line(pts3d[hull_indices[-1]], pts3d[hull_indices[0]], color=GOLD)
