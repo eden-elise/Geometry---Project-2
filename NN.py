@@ -159,7 +159,7 @@ def visualize_prediction_gallery(model, test_db, dataset_obj, samples_per_lang=4
             is_correct = (actual_lang == pred_lang)
             ax.set_facecolor("#f9f9f9" if is_correct else "#fff0f0")
             title_color = "green" if is_correct else "red"
-            ax.set_title(f"Col {c+1} ({actual_lang}): '{word}'\nPred: {pred_lang}", 
+            ax.set_title(f"({actual_lang}): '{word}'\nPred: {pred_lang}", 
                          fontproperties=font_p, fontsize=11, color=title_color)
             
             ax.set_aspect("equal")
