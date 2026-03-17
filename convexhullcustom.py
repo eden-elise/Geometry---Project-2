@@ -13,7 +13,7 @@ class ConvexHull_C():
       self.points = points
       self.hull, self.vertices = self.convex_hull_custom(points)
 
-    def convex_hull_custom(self, points: np.ndarray)-> np.ndarray:
+    def convex_hull_custom(self, points: np.ndarray) - > tuple[NDArray, NDArray]:
       start_idx = np.argmin(points[:, 1])
       angles = np.arctan2(points[:, 1] - points[start_idx, 1], points[:, 0] - points[start_idx, 0])
       points_sorted = points[np.argsort(angles)]

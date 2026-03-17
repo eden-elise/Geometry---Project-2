@@ -75,84 +75,99 @@ class LanguageClassifier(nn.Module):
 
 # --- 3. Visualization Function ---
 
-def visualize_prediction_gallery(model, test_db, dataset_obj, num_samples=12):
+def visualize_prediction_gallery(model, test_db, dataset_obj, samples_per_lang=4):
     model.eval()
-    cols = 3
-    rows = num_samples // cols
     
-    # Increase figsize for better clarity in the grid
+    # We define the column order strictly
+    target_langs = ["English", "Arabic", "Chinese"]
+    cols = len(target_langs)
+    rows = samples_per_lang
+    num_total = rows * cols
+    
     fig, axes = plt.subplots(rows, cols, figsize=(20, 5 * rows))
-    axes = axes.flatten()
+    # Ensure axes is a 2D array even if rows=1
+    if rows == 1:
+        axes = np.array([axes])
 
-    # Get 18 unique random samples from the test set
-    random_indices = random.sample(range(len(test_db)), num_samples)
+    # 1. Group all test_db indices by their language label
+    lang_to_test_indices = {lang: [] for lang in target_langs}
+    for idx_in_test_db in range(len(test_db)):
+        _, label_tensor = test_db[idx_in_test_db]
+        lang_name = dataset_obj.idx_to_label[label_tensor.item()]
+        if lang_name in lang_to_test_indices:
+            lang_to_test_indices[lang_name].append(idx_in_test_db)
 
-    for i, test_idx in enumerate(random_indices):
-        ax = axes[i]
-        
-        # 1. Get Data
-        input_tensor, target_label = test_db[test_idx]
-        original_idx = test_db.indices[test_idx]
-        raw_record = dataset_obj.raw_records[original_idx]
-        
-        # 2. Prediction
-        with torch.no_grad():
-            output = model(input_tensor.unsqueeze(0))
-            probs = torch.softmax(output, dim=1)[0]
-        
-        actual_lang = dataset_obj.idx_to_label[target_label.item()]
-        pred_idx = torch.argmax(probs).item()
-        pred_lang = dataset_obj.idx_to_label[pred_idx]
-        
-        word = raw_record['word']
-        hull_pts = np.array(raw_record['hull_points'])
-        
-        # 3. Plot Text Path & Hull
-        try:
-            font_p = FontProperties(fname=FONT_PATHS[actual_lang])
-            from matplotlib.textpath import TextPath
-            t_path = TextPath((0, 0), word, size=100, prop=font_p)
-            ax.scatter(t_path.vertices[:, 0], t_path.vertices[:, 1], s=0.5, color="gray", alpha=0.2)
-        except:
-            font_p = None
+    # 2. Pick random samples for each column
+    selected_indices_grid = []
+    for r in range(rows):
+        row_indices = []
+        for lang in target_langs:
+            # Pick one random index for this language column
+            idx = random.choice(lang_to_test_indices[lang])
+            row_indices.append(idx)
+        selected_indices_grid.append(row_indices)
 
-        # Draw Hull with correct color settings
-        poly = Polygon(hull_pts, facecolor='#4A90D9', alpha=0.1, edgecolor='#4A90D9', lw=1.5)
-        ax.add_patch(poly)
-        ax.scatter(hull_pts[:, 0], hull_pts[:, 1], s=8, color="#E85D4A", alpha=0.6)
+    # 3. Plotting
+    for r in range(rows):
+        for c in range(cols):
+            ax = axes[r, c]
+            test_idx = selected_indices_grid[r][c]
+            
+            # Data Retrieval
+            input_tensor, target_label = test_db[test_idx]
+            original_idx = test_db.indices[test_idx]
+            raw_record = dataset_obj.raw_records[original_idx]
+            
+            # Prediction
+            with torch.no_grad():
+                output = model(input_tensor.unsqueeze(0))
+                probs = torch.softmax(output, dim=1)[0]
+            
+            actual_lang = dataset_obj.idx_to_label[target_label.item()]
+            pred_idx = torch.argmax(probs).item()
+            pred_lang = dataset_obj.idx_to_label[pred_idx]
+            word = raw_record['word']
+            hull_pts = np.array(raw_record['hull_points'])
+            
+            # Plot Text Path
+            try:
+                font_p = FontProperties(fname=FONT_PATHS[actual_lang])
+                from matplotlib.textpath import TextPath
+                t_path = TextPath((0, 0), word, size=100, prop=font_p)
+                ax.scatter(t_path.vertices[:, 0], t_path.vertices[:, 1], s=0.5, color="gray", alpha=0.2)
+            except:
+                font_p = None
 
-        # 4. Confidence Bars (Mini-Legend)
-        conf_info = ""
-        for j, p in enumerate(probs):
-            lang_name = dataset_obj.idx_to_label[j]
-            # Create a small text-based bar: [###       ]
-            bar_len = int(p.item() * 10)
-            bar_str = "#" * bar_len
-            mark = "★" if j == pred_idx else " "
-            conf_info += f"{mark}{lang_name[:2]}: {p.item():.1%} {bar_str}\n"
-        
-        # Overlay confidence info in a rounded box
-        ax.text(1.02, 0.5, conf_info, transform=ax.transAxes, fontsize=8, 
-                verticalalignment='center', family='monospace',
-                bbox=dict(boxstyle='round', facecolor='white', edgecolor='gray', alpha=0.7))
+            # Draw Hull
+            poly = Polygon(hull_pts, facecolor='#4A90D9', alpha=0.1, edgecolor='#4A90D9', lw=1.5)
+            ax.add_patch(poly)
+            ax.scatter(hull_pts[:, 0], hull_pts[:, 1], s=8, color="#E85D4A", alpha=0.6)
 
-        # 5. Background and Title styling
-        is_correct = (actual_lang == pred_lang)
-        bg_color = "#f9f9f9" if is_correct else "#fff0f0" # Light red for mistakes
-        ax.set_facecolor(bg_color)
-        
-        title_color = "green" if is_correct else "red"
-        ax.set_title(f"'{word}'\nAct: {actual_lang} | Pred: {pred_lang}", 
-                     fontproperties=font_p, fontsize=11, color=title_color)
-        
-        ax.set_aspect("equal")
-        ax.axis("off")
+            # Confidence Bars (Mini-Legend)
+            conf_info = ""
+            for j, p in enumerate(probs):
+                l_name = dataset_obj.idx_to_label[j]
+                bar_str = "#" * int(p.item() * 10)
+                mark = "★" if j == pred_idx else " "
+                conf_info += f"{mark}{l_name[:2]}: {p.item():.1%} {bar_str}\n"
+            
+            ax.text(1.02, 0.5, conf_info, transform=ax.transAxes, fontsize=8, 
+                    verticalalignment='center', family='monospace',
+                    bbox=dict(boxstyle='round', facecolor='white', edgecolor='gray', alpha=0.7))
+
+            # Styling
+            is_correct = (actual_lang == pred_lang)
+            ax.set_facecolor("#f9f9f9" if is_correct else "#fff0f0")
+            title_color = "green" if is_correct else "red"
+            ax.set_title(f"Col {c+1} ({actual_lang}): '{word}'\nPred: {pred_lang}", 
+                         fontproperties=font_p, fontsize=11, color=title_color)
+            
+            ax.set_aspect("equal")
+            ax.axis("off")
 
     plt.tight_layout()
-    # Add extra space on the right for the mini-legends
     plt.subplots_adjust(right=0.9, hspace=0.4, wspace=0.6)
     plt.show()
-
 # To call this in your run_experiment():
 # visualize_prediction_gallery(model, test_db, dataset)
 
