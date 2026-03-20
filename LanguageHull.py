@@ -22,7 +22,7 @@ from scipy.spatial import ConvexHull
 from convexhullcustom import ConvexHull_C
 plt.style.use("seaborn-v0_8")
 
-CONVEX_HULL = ""
+CONVEX_HULL = None
 import nltk
 
 import re
@@ -33,7 +33,7 @@ FONT_PATHS = {
     "Chinese":  "fonts/Noto_Sans_TC/static/NotoSansTC-Regular.ttf",
 }
 
-N_WORDS_PER_LANGUAGE = 5000
+N_WORDS_PER_LANGUAGE = 25
 
 COLORS = {
     "English": "#4A90D9",
