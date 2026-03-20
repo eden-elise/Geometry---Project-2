@@ -1,0 +1,87 @@
+# ── Helpers ──────────────────────────────────────────────────────────────────
+
+def bezier_point(t, p0, p1, p2, p3):
+    """Evaluate a cubic Bézier at parameter t."""
+    return (
+        (1 - t) ** 3 * p0
+        + 3 * (1 - t) ** 2 * t * p1
+        + 3 * (1 - t) * t ** 2 * p2
+        + t ** 3 * p3
+    )
+
+
+def make_bezier_curve(p0, p1, p2, p3, color=WHITE, steps=200):
+    """Build a ParametricFunction for a cubic Bézier."""
+    return ParametricFunction(
+        lambda t: bezier_point(t, p0, p1, p2, p3),
+        t_range=[0, 1],
+        color=color,
+        stroke_width=3,
+    )
+
+class VisualizeBezier(Scene):
+    P0 = np.array([ 1.5, -1.0, 0.0])
+    P1 = np.array([ 1.5,  1.5, 0.0])
+    P2 = np.array([-1.0,  1.5, 0.0])
+    P3 = np.array([-1.0, -1.0, 0.0])
+
+    def construct(self):
+        p0, p1, p2, p3 = self.P0, self.P1, self.P2, self.P3
+
+        # Control frame
+        arm1 = DashedLine(p0, p1, color=ORANGE, stroke_opacity=0.6)
+        arm2 = DashedLine(p3, p2, color=ORANGE, stroke_opacity=0.6)
+
+        dots = {
+            "P₀": (p0, GREEN,  DR),
+            "P₁": (p1, ORANGE, UR),
+            "P₂": (p2, ORANGE, UL),
+            "P₃": (p3, GREEN,  DL),
+        }
+        dot_mobs = VGroup()
+        lbl_mobs = VGroup()
+        for name, (pt, color, direction) in dots.items():
+            d = Dot(pt, color=color, radius=0.11)
+            l = Text(name, font_size=22).next_to(d, direction, buff=0.15)
+            dot_mobs.add(d)
+            lbl_mobs.add(l)
+
+        self.play(Create(arm1), Create(arm2), Create(dot_mobs), Write(lbl_mobs))
+        self.wait(0.5)
+
+        # Animate the curve being traced
+        t_tracker = ValueTracker(0)
+        moving_dot = always_redraw(lambda: Dot(
+            bezier_point(t_tracker.get_value(), p0, p1, p2, p3),
+            color=RED, radius=0.13,
+        ))
+        traced = TracedPath(moving_dot.get_center, stroke_color=BLUE, stroke_width=5)
+
+        t_label = always_redraw(lambda:
+            Text(f"t = {t_tracker.get_value():.2f}", font_size=22)
+            .to_corner(DR).shift(LEFT * 0.3 + UP * 0.3)
+        )
+
+        self.add(traced, moving_dot, t_label)
+        self.play(t_tracker.animate.set_value(1), run_time=3, rate_func=linear)
+        self.wait(0.5)
+
+        # Show P1/P2 never touched note
+        note = Text(
+            "P₁ and P₂ are never on the curve —\nthey pull it toward the corner.",
+            font_size=20, color=ORANGE,
+        ).to_edge(DOWN)
+        self.play(FadeIn(note))
+
+        # Pulse the control points to draw attention
+        self.play(
+            dot_mobs[1].animate.scale(1.8),
+            dot_mobs[2].animate.scale(1.8),
+            run_time=0.4,
+        )
+        self.play(
+            dot_mobs[1].animate.scale(1/1.8),
+            dot_mobs[2].animate.scale(1/1.8),
+            run_time=0.4,
+        )
+        self.wait(1.5)
